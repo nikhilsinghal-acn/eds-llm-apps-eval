@@ -1,0 +1,5 @@
+path,template,robots,description
+/eds-widgets/**,widget,"noindex, nofollow",LLM Apps widget surface. Not a page.
+/,,"index, follow",Veyra Motors - configurable vehicles delivered across India.
+/options,,"index, follow",Paint, wheels, packs and roof options for the Veyra Terra, with full compatibility rules.
+/models/terra,,"index, follow",Veyra Terra: two trims, specifications and configuration options.
