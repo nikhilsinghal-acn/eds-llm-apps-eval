@@ -28,20 +28,16 @@ function readAuthoredConfig(block) {
 }
 
 // ---- Input 2: live data -------------------------------------------------------
-async function loadState(bridge, cfg) {
-  if (bridge) {
+async function loadState(bridge, patch) {
+  if (bridge && !patch) {
     const result = await bridge.toolResult;
     return result?.structuredContent ?? null;
   }
-  // On the website the same block calls the same configurator API directly.
-  const endpoint = cfg.apiEndpoint;
-  if (!endpoint) return null;
-  try {
-    const res = await fetch(`${endpoint}?${new URLSearchParams(window.location.search)}`);
-    return res.ok ? await res.json() : null;
-  } catch {
-    return null;
-  }
+  // The public page has no configurator API. It runs the same rules in the browser
+  // from the query string the chat card links to.
+  const { configure } = await import('./engine.js');
+  const fromUrl = Object.fromEntries(new URLSearchParams(window.location.search));
+  return configure({ ...fromUrl, ...patch });
 }
 
 function renderOption(groupId, option) {
@@ -93,7 +89,7 @@ function renderPrice(price) {
   return wrapper;
 }
 
-function render(block, vm) {
+function render(block, vm, embedded) {
   if (vm.empty) {
     block.replaceChildren(el('p', 'vc-empty', vm.message));
     return;
@@ -127,7 +123,8 @@ function render(block, vm) {
 
   const cta = el('a', 'vc-cta', vm.cta.label);
   cta.href = vm.cta.href;
-  cta.rel = 'noopener';
+  cta.rel = 'noopener noreferrer';
+  if (embedded) cta.target = '_blank';
   parts.push(cta);
 
   block.replaceChildren(...parts);
@@ -140,10 +137,23 @@ export default async function decorate(block, bridge) {
   // rather than on top of it. A no-op on the website, where brand CSS wins.
   if (bridge) bridge.applyHostStyles();
 
-  let state = await loadState(bridge, cfg);
-  render(block, toViewModel(state, cfg));
+  let state = await loadState(bridge);
+  render(block, toViewModel(state, cfg), Boolean(bridge));
 
   block.addEventListener('click', async (event) => {
+    const link = event.target.closest('.vc-cta');
+    if (link && bridge) {
+      // A plain click navigates the widget iframe and the host shows a broken
+      // document. Ask the host to open the brand site instead.
+      event.preventDefault();
+      try {
+        await bridge.openLink(link.href);
+      } catch {
+        window.open(link.href, '_blank', 'noopener');
+      }
+      return;
+    }
+
     const button = event.target.closest('.vc-option');
     if (!button || button.disabled || !state) return;
 
@@ -157,10 +167,14 @@ export default async function decorate(block, bridge) {
       const result = await bridge.callTool(ACTION, { ...state.selections, ...patch });
       state = result?.structuredContent ?? state;
     } else {
-      state = await loadState(bridge, { ...cfg, ...patch });
+      state = await loadState(null, { ...state.selections, ...patch });
     }
 
-    render(block, toViewModel(state, cfg));
+    render(block, toViewModel(state, cfg), Boolean(bridge));
+    if (!bridge && state?.selections) {
+      const next = new URLSearchParams(state.selections);
+      window.history.replaceState(null, '', `${window.location.pathname}?${next.toString()}`);
+    }
     if (bridge) bridge.autoResize(block);
   });
 

@@ -40,6 +40,6 @@ export function toViewModel(state, config = {}) {
       ],
       note: config.priceNote || state.price.disclaimer,
     },
-    cta: { label: config.ctaLabel || state.cta, href: state.deepLink },
+    cta: { label: config.ctaLabel || state.cta, href: config.ctaHref || state.deepLink },
   };
 }
