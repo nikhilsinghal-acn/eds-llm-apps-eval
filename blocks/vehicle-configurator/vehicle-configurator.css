@@ -64,6 +64,9 @@
   display: inline-block; padding: 9px 16px; border-radius: 8px;
   background: var(--vc-accent); color: #fff; text-decoration: none; font-size: 14px;
 }
+.vehicle-configurator button.vc-cta {
+  border: 0; cursor: pointer; font: inherit; text-align: left;
+}
 
 @media (prefers-reduced-motion: no-preference) {
   .vehicle-configurator .vc-option { transition: border-color 120ms ease; }

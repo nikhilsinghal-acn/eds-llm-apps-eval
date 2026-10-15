@@ -74,7 +74,7 @@ export class AEMEmbed extends HTMLElement {
     }
 
     try {
-      const blockScriptUrl = `${origin}${window.hlx.codeBasePath}/blocks/${blockName}/${blockName}.js`;
+      const blockScriptUrl = `${origin}${window.hlx.codeBasePath}/blocks/${blockName}/${blockName}.js?v=20261015b`;
       // eslint-disable-next-line no-await-in-loop
       const decorateBlock = await import(blockScriptUrl);
       if (decorateBlock.default) {

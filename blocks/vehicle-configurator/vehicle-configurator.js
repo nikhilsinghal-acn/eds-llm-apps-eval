@@ -89,6 +89,31 @@ function renderPrice(price) {
   return wrapper;
 }
 
+function renderCta(vm, embedded) {
+  // An <a> inside the chat iframe navigates the card itself, and the host then
+  // shows a broken document. In the widget this is a button with no href.
+  if (!embedded) {
+    const cta = el('a', 'vc-cta', vm.cta.label);
+    cta.href = vm.cta.href;
+    cta.rel = 'noopener noreferrer';
+    return cta;
+  }
+  const cta = el('button', 'vc-cta', vm.cta.label);
+  cta.type = 'button';
+  cta.dataset.href = vm.cta.href;
+  return cta;
+}
+
+async function openOutside(bridge, url) {
+  if (typeof window.openai?.openExternal === 'function') {
+    try {
+      await window.openai.openExternal({ href: url });
+      return;
+    } catch { /* fall through to the standard host call */ }
+  }
+  await bridge.openLink(url);
+}
+
 function render(block, vm, embedded) {
   if (vm.empty) {
     block.replaceChildren(el('p', 'vc-empty', vm.message));
@@ -121,11 +146,7 @@ function render(block, vm, embedded) {
 
   parts.push(renderPrice(vm.price));
 
-  const cta = el('a', 'vc-cta', vm.cta.label);
-  cta.href = vm.cta.href;
-  cta.rel = 'noopener noreferrer';
-  if (embedded) cta.target = '_blank';
-  parts.push(cta);
+  parts.push(renderCta(vm, embedded));
 
   block.replaceChildren(...parts);
 }
@@ -143,13 +164,12 @@ export default async function decorate(block, bridge) {
   block.addEventListener('click', async (event) => {
     const link = event.target.closest('.vc-cta');
     if (link && bridge) {
-      // A plain click navigates the widget iframe and the host shows a broken
-      // document. Ask the host to open the brand site instead.
       event.preventDefault();
+      const url = link.dataset.href;
       try {
-        await bridge.openLink(link.href);
+        await openOutside(bridge, url);
       } catch {
-        window.open(link.href, '_blank', 'noopener');
+        link.replaceChildren(document.createTextNode(url));
       }
       return;
     }
